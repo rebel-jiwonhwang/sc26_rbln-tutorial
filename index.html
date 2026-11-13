@@ -37,10 +37,11 @@
   .url-card { width:100%; max-width:360px; margin:0 auto; background:var(--text); color:#fff;
               border-radius:4px; padding:22px 18px 16px; }
   .url-card .label { font-size:11px; letter-spacing:.2em; color:var(--muted); margin:0 0 10px; }
-  .url-big { display:block; color:#fff; text-decoration:none; word-break:break-all;
+  .url-big { display:block; color:#fff; text-decoration:none; white-space:nowrap; overflow:hidden;
              font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-             font-size:clamp(22px, 7vw, 30px); font-weight:700; line-height:1.25; }
+             font-size:30px; font-weight:700; line-height:1.25; letter-spacing:-.01em; }
   .url-big .host { color:var(--green); }
+  .url-big .port, .url-big .path { color:#fff; }
   .url-actions { display:flex; gap:8px; justify-content:center; margin-top:16px; }
   .url-actions a, .url-actions button { border:1px solid var(--line-dark, #3b434a); background:transparent; color:#fff;
              font-family:inherit; font-size:13px; font-weight:600; line-height:1; padding:10px 14px; border-radius:3px; text-decoration:none; cursor:pointer; }
@@ -124,21 +125,34 @@
 
 <script>
 // ===== 여기만 바꾸면 돼요 =====
-const DEMO_URL    = "211.254.154.147:8090";   // 예시 링크. 데모 링크 확정되면 교체
+const DEMO_URL    = "211.254.154.147:8090";   // http:// 없이 써도 돼요
 const SECRET_CODE = "sc26-demo";
 // ==============================
 (function () {
-  // 화면 표시용: https:// 와 끝의 / 제거, 도메인은 초록색
+  // 링크 앞에 http(s)://가 없으면 붙여서 실제로 열리게 함
+  const HREF = /^[a-z][a-z0-9+.-]*:\/\//i.test(DEMO_URL) ? DEMO_URL : "http://" + DEMO_URL;
+
+  // 화면 표시용: http(s):// 와 끝의 / 제거. 주소는 초록, 포트/경로는 흰색
   const shown = DEMO_URL.replace(/^https?:\/\//, "").replace(/\/$/, "");
-  const cut = shown.indexOf("/");
-  const host = cut < 0 ? shown : shown.slice(0, cut);
-  const path = cut < 0 ? "" : shown.slice(cut);
+  const m = shown.match(/^([^/:]+)(:\d+)?(.*)$/) || [shown, shown, "", ""];
   const a = document.getElementById("demo");
-  a.href = DEMO_URL;
+  a.href = HREF;
   a.innerHTML = "";
-  const h = document.createElement("span"); h.className = "host"; h.textContent = host;
-  a.append(h, document.createTextNode(path));
-  document.getElementById("open").href = DEMO_URL;
+  [["host", m[1]], ["port", m[2] || ""], ["path", m[3] || ""]].forEach(([cls, txt]) => {
+    if (!txt) return;
+    const s = document.createElement("span"); s.className = cls; s.textContent = txt; a.append(s);
+  });
+  document.getElementById("open").href = HREF;
+
+  // 주소가 한 줄에 다 들어가도록 글자 크기 자동 조절 (최대 30px, 최소 14px)
+  function fit() {
+    let size = 30;
+    a.style.fontSize = size + "px";
+    while (a.scrollWidth > a.clientWidth && size > 14) { size -= 1; a.style.fontSize = size + "px"; }
+  }
+  fit();
+  window.addEventListener("resize", fit);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
   document.getElementById("secret").textContent = SECRET_CODE;
 
   function copyBtn(id, text, label) {
@@ -150,7 +164,7 @@ const SECRET_CODE = "sc26-demo";
     });
   }
   copyBtn("copy", SECRET_CODE, "Copy");
-  copyBtn("copy-url", DEMO_URL, "Copy link");
+  copyBtn("copy-url", HREF, "Copy link");
 })();
 </script>
 </body>
